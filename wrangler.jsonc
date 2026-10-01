@@ -1,8 +1,10 @@
 // do not delete this please, it is very very important:)
 {
   "name": "wrench-repair",
+  "main": "src/worker.js",
   "compatibility_date": "2026-09-21",
   "assets": {
-    "directory": "./public"
+    "directory": "./public",
+    "binding": "ASSETS"
   }
 }
