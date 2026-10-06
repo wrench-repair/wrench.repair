@@ -11,7 +11,7 @@
     }
 
     body {
-      background-color: linear-gradient(135deg, #c258ff, #1babff);
+      background: linear-gradient(135deg, #c258ff, #1babff);
       margin: 0;
       min-height: 100vh;
       text-align: center;
@@ -22,7 +22,7 @@
     form {
       display: inline-block;
       padding: 1em;
-      border: 1px linear-gradient(135deg, #c258ff, #1babff);
+      border: 1px solid #cccccc;
       border-radius: 1em;
     }
 
@@ -35,9 +35,26 @@
       font: 1em sans-serif;
       width: 300px;
       box-sizing: border-box;
-      border: 1px linear-gradient(135deg, #c258ff, #1babff);
+      border: 1px solid #cccccc;
     }
     
+    input:focus, 
+    textarea:focus{
+      outline-style: solid;
+      outline-color: white;
+    }
+
+    textarea{
+      vertical-align: top;
+      height: 5em;
+    }
+    .button {
+      padding-left: 90px;
+    }
+
+    button {
+      margin-left: 0.5em;
+    }
 
     .topbar {
       display: flex;
