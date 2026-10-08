@@ -31,13 +31,17 @@
     }
 
     .topbar .logo img {
+      background: linear-gradient(135deg, #c258ff, #1babff);
       display: block;
       height: 40px;
       width: auto;
     }
     
     form {
-      display: inline-block;
+      display: block;
+      width: fit-content;
+      max-width: 100%;
+      margin: 0 auto;
       padding: 1em;
       border: 1px solid #cccccc;
       border-radius: 1em;
@@ -65,21 +69,27 @@
       height: 5em;
     }
     .button {
-      padding-left: 90px;
+      padding-left: 0;
+      text-align: center;
     }
 
     button {
-      margin-left: 0.5em;
+      margin-left: 0;
     }
 
   </style>
 </head>
 <body>
+  <header class="topbar">
+    <a class="logo" href="/">
+      <img src="assets/logo-transparent.png" alt="wrench.repair">
+    </a>
+  </header>
   <form 
     action = "/my-handling-form-page" method="post">
     <p>
-      <label for="name">Prompt:</label>
-      <input type="text" id="prompt" name="user_prompt" value = "place ai prompts here"/>
+      <label for="prompt">Prompt:</label>
+      <input type="text" id="prompt" name="user_prompt" placeholder = "place ai prompts here"/>
     
     </p>
     <p class="button">
@@ -89,10 +99,5 @@
     
 
   </form>
-  <header class="topbar">
-    <a class="logo" href="/">
-      <img src="assets/logo-transparent.png" alt="wrench.repair">
-    </a>
-  </header>
 </body>
 </html>
