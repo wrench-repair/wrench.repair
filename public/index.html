@@ -28,10 +28,11 @@
       align-items: center;
       justify-content: space-between;
       padding: 12px 24px;
+      width: 100%;
+      background: linear-gradient(135deg, #c258ff, #1babff);
     }
 
     .topbar .logo img {
-      background: linear-gradient(135deg, #c258ff, #1babff);
       display: block;
       height: 40px;
       width: auto;
@@ -85,7 +86,7 @@
       <img src="assets/logo-transparent.png" alt="wrench.repair">
     </a>
   </header>
-  <form 
+  <form id = "chat-form"
     action = "/my-handling-form-page" method="post">
     <p>
       <label for="prompt">Prompt:</label>
@@ -99,5 +100,48 @@
     
 
   </form>
+  <p id = "reply" role = "status"></p>
+  <script>
+  const form = document.getElementById("chat-form");
+  const input = document.getElementById("prompt");
+  const replyBox = document.getElementById("reply");
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const prompt = input.value.trim();
+
+    if (!prompt) {
+      replyBox.textContent = "Please type a message.";
+      return;
+    }
+
+    replyBox.textContent = "Sending...";
+
+    try {
+      // Send the typed message to your Worker.
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ prompt })
+      });
+
+      // Read the Worker's response.
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Request failed.");
+      }
+
+      // Put its reply on the page.
+      replyBox.textContent = data.reply;
+
+    } catch (error) {
+      replyBox.textContent = "Error: " + error.message;
+    }
+  });
+</script>
 </body>
 </html>
