@@ -1,4 +1,4 @@
-const MODEL = "gemini-3.8-flash";
+const MODEL = "gemma-4-31b";
  
 const SYSTEM_PROMPT = `You are RepAIr, a car repair assistant for beginners who own economy cars.
 Ask one short question at a time to find the cause, starting with the most common causes.
