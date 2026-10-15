@@ -3,145 +3,687 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>wrench.repair</title>
-  <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+  <meta name="description" content="wrench.repair is a car repair helper in development. Tell it what's wrong and get repair steps from official service manuals, matched to your experience.">
+  <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+  <link rel="preload" href="assets/fonts/coolvetica.woff2" as="font" type="font/woff2" crossorigin>
   <style>
-    html, body{
-      height: 100%;
-      margin: 0;
-    }
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      background: #cccccc; 
-      margin: 0;
-      min-height: 100vh;
-      text-align: center;
-      margin: 0;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    @font-face {
+      font-family: "Coolvetica";
+      src: url("assets/fonts/coolvetica.woff2") format("woff2");
+      font-weight: 400 700;
+      font-style: normal;
+      font-display: swap;
     }
 
+    :root {
+      --purple: #c258ff;
+      --blue: #1babff;
+      --gradient: linear-gradient(100deg, var(--purple), var(--blue));
+      --bg: #f4f4f1;
+      --surface: #ffffff;
+      --ink: #17142b;
+      --muted: #5d5a70;
+      --faint: #8d8a9e;
+      --line: #d9d8df;
+      --grid: rgba(23, 20, 43, 0.055);
+      --accent: #8a3bd8;
+      --tint: rgba(194, 88, 255, 0.12);
+      --warn-bg: #fff8e6;
+      --warn-line: #e5b53c;
+      --display: "Coolvetica", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Consolas, monospace;
+      --ease: cubic-bezier(.2, .7, .2, 1);
+      color-scheme: light dark;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0e0d16;
+        --surface: #16141f;
+        --ink: #ecebf3;
+        --muted: #a3a0b8;
+        --faint: #6f6c84;
+        --line: #2b2839;
+        --grid: rgba(255, 255, 255, 0.045);
+        --accent: #c993ff;
+        --tint: rgba(194, 88, 255, 0.16);
+        --warn-bg: #221d10;
+        --warn-line: #a8832a;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+    h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.04; margin: 0; letter-spacing: -0.02em; }
+    .mono { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
+    .wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 32px; }
+
+    /* Header */
     .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 24px;
-      width: 100%;
-      background: linear-gradient(135deg, #c258ff, #1babff);
+      position: sticky; top: 0; z-index: 20;
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      backdrop-filter: saturate(1.4) blur(12px);
+      -webkit-backdrop-filter: saturate(1.4) blur(12px);
+      border-bottom: 1px solid transparent;
+      transition: border-color .3s;
+    }
+    .topbar.scrolled { border-bottom-color: var(--line); }
+    .topbar .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
+    .logo { display: block; margin-left: -10px; }
+    .logo img { display: block; height: 40px; width: auto; }
+    .topbar nav { display: flex; gap: 24px; margin-left: auto; }
+    .topbar nav a { text-decoration: none; color: var(--muted); font-size: 0.95rem; transition: color .2s; }
+    .topbar nav a:hover { color: var(--ink); }
+
+    /* Hero */
+    .hero { position: relative; isolation: isolate; padding: 72px 0 0; }
+    .hero::before {
+      content: ""; position: absolute; inset: 0; z-index: -1;
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 32px 32px;
+      -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 75%);
+      mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 75%);
+    }
+    .hero-head { display: grid; grid-template-columns: 1.35fr 1fr; gap: 48px; align-items: end; }
+    .kicker { color: var(--faint); margin: 0 0 22px; display: flex; gap: 14px; flex-wrap: wrap; }
+    .kicker span + span::before { content: "/"; margin-right: 14px; color: var(--line); }
+    h1 { font-size: clamp(2.7rem, 6.2vw, 5.4rem); }
+    h1 .mark { position: relative; white-space: nowrap; }
+    h1 .mark::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: 0.02em; height: 0.12em;
+      background: var(--gradient); border-radius: 2px; z-index: -1;
+      transform-origin: left; transform: scaleX(0);
+      animation: grow 1s .5s var(--ease) forwards;
+    }
+    @keyframes grow { to { transform: scaleX(1); } }
+    .lede { font-size: 1.15rem; color: var(--muted); margin: 0; max-width: 30em; }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 13px 20px; border-radius: 10px;
+      font: 700 1rem var(--display); letter-spacing: 0.01em; text-decoration: none;
+      transition: transform .2s var(--ease), background-color .2s, border-color .2s;
+    }
+    .btn-primary { background: var(--ink); color: var(--bg); }
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-primary .arrow { transition: transform .2s var(--ease); }
+    .btn-primary:hover .arrow { transform: translateY(2px); }
+    .btn-ghost { border: 1px solid var(--line); color: var(--ink); }
+    .btn-ghost:hover { border-color: var(--ink); }
+
+    /* Manual sheet */
+    .sheet {
+      position: relative; margin: 56px 0 0;
+      background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+      box-shadow: 0 1px 0 var(--line), 0 30px 60px -40px rgba(60, 30, 120, .35);
+    }
+    .sheet-bar {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      padding: 14px 20px; border-bottom: 1px solid var(--line);
+    }
+    .sheet-bar .title { font: 700 1.1rem var(--display); }
+    .sheet-bar .code { color: var(--faint); }
+    .toggle {
+      position: relative; display: inline-grid; grid-template-columns: 1fr 1fr;
+      margin-left: auto; padding: 3px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line);
+    }
+    .toggle button {
+      position: relative; z-index: 1; border: 0; background: none; cursor: pointer;
+      padding: 7px 14px; font: 600 0.88rem var(--body); color: var(--muted); border-radius: 7px;
+      transition: color .25s;
+    }
+    .toggle button[aria-pressed="true"] { color: #fff; }
+    .toggle .pill {
+      position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px);
+      border-radius: 7px; background: var(--gradient);
+      transition: transform .35s var(--ease);
+    }
+    .toggle[data-mode="pro"] .pill { transform: translateX(100%); }
+
+    .sheet-body { display: grid; grid-template-columns: 1.05fr 1fr; }
+    .figure { position: relative; border-right: 1px solid var(--line); padding: 20px; cursor: crosshair; overflow: clip; }
+    .fig-sticky { position: sticky; top: 84px; }
+    .figure svg { display: block; width: 100%; height: auto; }
+    .fig-meta { display: flex; justify-content: space-between; color: var(--faint); }
+    .xhair { position: absolute; pointer-events: none; opacity: 0; transition: opacity .2s; }
+    .xhair.x { left: 0; right: 0; height: 0; border-top: 1px dashed var(--accent); }
+    .xhair.y { top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--accent); }
+    .figure:hover .xhair { opacity: .35; }
+    .readout { min-width: 13ch; text-align: right; }
+
+    .part { color: var(--ink); transition: color .3s, opacity .3s; }
+    .part .fillable { fill: var(--surface); transition: fill .3s; }
+    .part.on { color: var(--accent); }
+    .part.on .fillable { fill: var(--tint); }
+    .fig-art.has-on .part:not(.on):not(.static) { opacity: .35; }
+    .callout { color: var(--faint); transition: color .3s; }
+    .callout circle { fill: var(--surface); }
+    .callout text { font: 600 12px var(--body); fill: currentColor; }
+    .callout .letter { font: 700 11px var(--mono); }
+    .callout.on { color: var(--accent); }
+    .hidden-line { stroke-dasharray: 5 4; }
+
+    .js .draw [pathLength] { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.8s var(--ease) forwards; }
+    .js .draw .d2 { animation-delay: .35s !important; }
+    .js .draw .d3 { animation-delay: .7s !important; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    .js .fade-in { opacity: 0; animation: fade .6s 1.4s forwards; }
+    .js .callout { opacity: 0; animation: fade .5s forwards; }
+    @keyframes fade { to { opacity: 1; } }
+
+    .procedure { padding: 22px 24px 20px; display: flex; flex-direction: column; }
+    .proc-meta { display: flex; justify-content: space-between; color: var(--faint); margin-bottom: 8px; }
+    .steps-list { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+    .steps-list li {
+      counter-increment: s; position: relative;
+      display: grid; grid-template-columns: 34px 1fr; gap: 0 10px;
+      padding: 11px 12px 11px 8px; border-radius: 8px; cursor: default;
+      transition: background-color .25s;
+    }
+    .steps-list li::before {
+      content: counter(s, decimal-leading-zero);
+      font: 600 0.78rem var(--mono); color: var(--faint); padding-top: 3px; transition: color .25s;
+    }
+    .steps-list li::after {
+      content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 2px; border-radius: 2px;
+      background: var(--gradient); transform: scaleY(0); transition: transform .3s var(--ease);
+    }
+    .steps-list li.on { background: var(--tint); }
+    .steps-list li.on::before { color: var(--accent); }
+    .steps-list li.on::after { transform: scaleY(1); }
+    .steps-list strong { display: block; font-weight: 650; }
+    .steps-list p { grid-column: 2; margin: 3px 0 0; color: var(--muted); font-size: 0.93rem; line-height: 1.5; }
+    .steps-list .warn { grid-column: 2; margin-top: 6px; color: var(--ink); font-size: 0.85rem; }
+    .steps-list .warn::before { content: "WARNING"; font: 700 0.68rem var(--mono); letter-spacing: .08em; color: #b17800; margin-right: 8px; }
+    @media (prefers-color-scheme: dark) { .steps-list .warn::before { color: #e5b53c; } }
+    .steps-list.pro p { font-family: var(--mono); font-size: 0.8rem; }
+    .steps-list[hidden] { display: none; }
+    .js .steps-list.entering li { animation: slide .45s var(--ease) both; }
+    .steps-list.entering li:nth-child(2) { animation-delay: .04s; }
+    .steps-list.entering li:nth-child(3) { animation-delay: .08s; }
+    .steps-list.entering li:nth-child(4) { animation-delay: .12s; }
+    .steps-list.entering li:nth-child(5) { animation-delay: .16s; }
+    .steps-list.entering li:nth-child(6) { animation-delay: .2s; }
+    .steps-list.entering li:nth-child(7) { animation-delay: .24s; }
+    .steps-list.entering li:nth-child(8) { animation-delay: .28s; }
+    @keyframes slide { from { opacity: 0; transform: translateY(8px); } }
+    .footnote { margin: auto 0 0; padding-top: 14px; color: var(--faint); font-size: 0.8rem; }
+
+    /* Sections */
+    section.block { padding: 112px 0; }
+    .sec-head { display: grid; grid-template-columns: 180px 1fr; gap: 24px; align-items: baseline; }
+    .sec-head .mono { color: var(--faint); }
+    .sec-head h2 { font-size: clamp(2rem, 4vw, 3.2rem); max-width: 16em; }
+    .sec-head .sub { grid-column: 2; color: var(--muted); font-size: 1.1rem; margin: 14px 0 0; max-width: 34em; }
+
+    /* How it works */
+    .flow { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin: 64px 0 0; padding: 0; list-style: none; }
+    .flow::before, .flow::after { content: ""; position: absolute; top: 5px; left: 0; right: 0; height: 1px; background: var(--line); }
+    .flow::after { background: var(--gradient); transform-origin: left; transform: scaleX(0); transition: transform 1.6s var(--ease); }
+    .flow.in::after { transform: scaleX(1); }
+    .flow li { position: relative; padding-top: 34px; }
+    .flow li::before {
+      content: ""; position: absolute; top: 0; left: 0; width: 11px; height: 11px; border-radius: 50%;
+      background: var(--bg); border: 1px solid var(--faint); z-index: 1;
+      transition: background .3s, border-color .3s;
+    }
+    .flow.in li::before { background: var(--purple); border-color: var(--purple); }
+    .flow.in li:nth-child(2)::before { transition-delay: .7s; }
+    .flow.in li:nth-child(3)::before { transition-delay: 1.4s; }
+    .flow .mono { color: var(--faint); }
+    .flow h3 { font-size: 1.45rem; margin: 8px 0 0; }
+    .flow p { color: var(--muted); margin: 8px 0 0; }
+    .mock {
+      margin-top: 22px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+      font-size: 0.9rem; min-height: 84px;
+    }
+    .mock .label { color: var(--faint); font-size: 0.68rem; display: block; margin-bottom: 8px; }
+    .typed::after { content: ""; display: inline-block; width: 2px; height: 1.05em; margin-left: 2px; vertical-align: -0.15em; background: var(--accent); animation: blink 1s steps(1) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+    .scale i { height: 8px; border-radius: 2px; background: var(--line); }
+    .scale i.f { background: var(--gradient); background-size: 500% 100%; }
+    .scale i.f:nth-child(1) { background-position: 0 0; }
+    .scale i.f:nth-child(2) { background-position: 25% 0; }
+    .scale-labels { display: flex; justify-content: space-between; margin-top: 8px; color: var(--muted); font-size: 0.8rem; }
+    .cite { display: flex; align-items: center; gap: 10px; }
+    .cite svg { flex: none; color: var(--accent); }
+
+    /* Spec table */
+    .spec { width: 100%; margin: 56px 0 0; border-collapse: collapse; }
+    .spec th { text-align: left; font-weight: 400; color: var(--faint); padding: 0 16px 12px 0; border-bottom: 1px solid var(--ink); }
+    .spec td { padding: 22px 16px 22px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .spec tr td:first-child { width: 80px; color: var(--faint); font-family: var(--mono); font-size: 0.8rem; padding-top: 26px; }
+    .spec td.item { font: 700 1.25rem var(--display); width: 32%; position: relative; }
+    .spec td.desc { color: var(--muted); }
+    .spec td.stat { width: 120px; text-align: right; padding-right: 0; white-space: nowrap; color: var(--muted); padding-top: 26px; }
+    .spec td.stat::before { content: ""; display: inline-block; width: 6px; height: 6px; border: 1px solid var(--accent); border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
+    .spec tbody tr { transition: background-color .25s; }
+    .spec tbody tr:hover { background: linear-gradient(90deg, var(--tint), transparent 70%); }
+
+    /* Status */
+    .status { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+    .status h2 { font-size: clamp(2rem, 4vw, 3.2rem); }
+    .status .sub { color: var(--muted); font-size: 1.1rem; margin: 14px 0 0; max-width: 28em; }
+    .stamp-wrap { position: relative; }
+    .stamp {
+      display: inline-block; margin-top: 36px; padding: 10px 18px;
+      border: 3px solid var(--accent); border-radius: 6px; color: var(--accent);
+      font: 700 1.05rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase;
+      transform: rotate(-6deg);
+      -webkit-mask-image: radial-gradient(circle at 30% 40%, #000 60%, rgba(0,0,0,.75) 61%, #000 70%);
+      mask-image: radial-gradient(circle at 30% 40%, #000 60%, rgba(0,0,0,.75) 61%, #000 70%);
+    }
+    .js .stamp { opacity: 0; transform: rotate(-6deg) scale(1.8); }
+    .js .stamp.in { animation: stamp .45s cubic-bezier(.3, 1.6, .5, 1) .25s forwards; }
+    @keyframes stamp { to { opacity: .9; transform: rotate(-6deg) scale(1); } }
+    .warning { border: 1px solid var(--warn-line); border-left-width: 4px; background: var(--warn-bg); border-radius: 6px; padding: 18px 20px; }
+    .warning .mono { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+    .warning p { margin: 0; color: var(--muted); }
+
+    footer { border-top: 1px solid var(--line); padding: 28px 0 36px; position: relative; }
+    footer::before { content: ""; position: absolute; top: -1px; left: 0; width: 120px; height: 2px; background: var(--gradient); }
+    footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; align-items: center; color: var(--faint); }
+    footer img { display: block; height: 30px; width: auto; margin-left: -8px; }
+
+    /* Scroll reveal */
+    .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity .8s var(--ease), transform .8s var(--ease); }
+    .js .reveal.in { opacity: 1; transform: none; }
+    .js .hero .reveal { transition-delay: .1s; }
+    .js .hero .reveal.r2 { transition-delay: .25s; }
+    .js .hero .reveal.r3 { transition-delay: .4s; }
+
+    @media (max-width: 960px) {
+      .hero { padding-top: 48px; }
+      .hero-head { grid-template-columns: 1fr; gap: 24px; }
+      .sheet-body { grid-template-columns: 1fr; }
+      .figure { border-right: 0; border-bottom: 1px solid var(--line); }
+      section.block { padding: 80px 0; }
+      .sec-head { grid-template-columns: 1fr; gap: 10px; }
+      .sec-head .sub { grid-column: 1; }
+      .flow { grid-template-columns: 1fr; gap: 40px; }
+      .flow::before, .flow::after { top: 0; bottom: 0; left: 5px; right: auto; width: 1px; height: auto; }
+      .flow::after { transform-origin: top; transform: scaleY(0); }
+      .flow.in::after { transform: scaleY(1); }
+      .flow li { padding: 0 0 0 36px; }
+      .status { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .wrap { padding: 0 16px; }
+      .topbar nav { display: none; }
+      .logo img { height: 30px; }
+      .figure { padding: 16px 12px; }
+      .callout text { font-size: 15px; }
+      .callout .letter { font-size: 13px; }
+      .sheet-bar .toggle { margin-left: 0; width: 100%; }
+      .procedure { padding: 18px 12px; }
+      .spec thead { display: none; }
+      .spec tr { display: grid; grid-template-columns: 48px 1fr; padding: 18px 0; border-bottom: 1px solid var(--line); }
+      .spec td { border: 0; padding: 0; width: auto !important; text-align: left !important; }
+      .spec tr td:first-child { grid-row: span 3; padding-top: 4px; }
+      .spec td.desc { margin-top: 4px; }
+      .spec td.stat { margin-top: 8px; }
     }
 
-    .topbar .logo img {
-      display: block;
-      height: 40px;
-      width: auto;
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; transition-delay: 0s !important; }
     }
-    
-    form {
-      display: block;
-      width: fit-content;
-      max-width: 100%;
-      margin: 0 auto;
-      padding: 1em;
-      border: 1px solid #cccccc;
-      border-radius: 1em;
-    }
-
-    p + p{
-      margin-top: 1em;
-    }
-
-    input, 
-    textarea{
-      font: 1em sans-serif;
-      width: 300px;
-      box-sizing: border-box;
-    }
-    
-    input:focus, 
-    textarea:focus{
-      outline-style: solid;
-      outline-color: white;
-    }
-
-    textarea{
-      vertical-align: top;
-      height: 5em;
-    }
-    .button {
-      padding-left: 0;
-      text-align: center;
-    }
-
-    button {
-      margin-left: 0;
-    }
-
   </style>
+  <script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
   <header class="topbar">
-    <a class="logo" href="/">
-      <img src="assets/logo-transparent.png" alt="wrench.repair">
-    </a>
+    <div class="wrap">
+      <a class="logo" href="/">
+        <img src="assets/logo-transparent-gradient.png" alt="wrench.repair" width="250" height="40">
+      </a>
+      <nav aria-label="Primary">
+        <a href="#example">Example</a>
+        <a href="#how">How it works</a>
+        <a href="#features">What's planned</a>
+      </nav>
+    </div>
   </header>
-  <form id = "chat-form"
-    action = "/my-handling-form-page" method="post">
-    <p>
-      <label for="prompt">Prompt:</label>
-      <input type="text" id="prompt" name="user_prompt" placeholder = "place ai prompts here"/>
-    
-    </p>
-    <p class="button">
-      <button type = "submit">BLOW UP RAMESES ROBERTS RICHARDS FOR FREE</button>
 
-    </p>
-    
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <div class="hero-head">
+          <div class="reveal">
+            <p class="kicker mono"><span>Car repair helper</span><span>Official manuals</span><span>Rev. 0</span></p>
+            <h1>Fix your car using the <span class="mark">real service</span> manual.</h1>
+          </div>
+          <div class="reveal r2">
+            <p class="lede">Tell wrench.repair what's wrong with your car. It walks you through the repair using the manufacturer's own service manual, written for how much experience you have.</p>
+            <div class="actions">
+              <a class="btn btn-primary" href="#example">Try the example <span class="arrow" aria-hidden="true">&darr;</span></a>
+              <a class="btn btn-ghost" href="#how">How it works</a>
+            </div>
+          </div>
+        </div>
 
-  </form>
-  <p id = "reply" role = "status"></p>
+        <div class="sheet reveal r3" id="example">
+          <div class="sheet-bar">
+            <span class="code mono">Procedure 19-04</span>
+            <span class="title">Front brake pads: replace</span>
+            <div class="toggle" role="group" aria-label="Experience level" data-mode="new">
+              <span class="pill" aria-hidden="true"></span>
+              <button type="button" data-mode="new" aria-pressed="true">New to this</button>
+              <button type="button" data-mode="pro" aria-pressed="false">Done it before</button>
+            </div>
+          </div>
+
+          <div class="sheet-body">
+            <div class="figure" id="figure">
+              <div class="fig-sticky">
+              <div class="fig-meta mono"><span>Fig. 1 &middot; Front disc brake</span><span class="readout" aria-hidden="true">X 000 &nbsp;Y 000</span></div>
+              <svg class="fig-art draw" viewBox="0 0 520 400" role="img" aria-label="Diagram of a front disc brake with labeled caliper, brake pads, slide bolt, rotor and lug nuts">
+                <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <g class="part" data-part="D">
+                    <circle class="fillable" cx="200" cy="200" r="120" pathLength="1"/>
+                    <circle cx="200" cy="200" r="112" pathLength="1" opacity=".4" class="d2"/>
+                    <g opacity=".7">
+                      <circle cx="283.1" cy="222.3" r="4" pathLength="1" class="d2"/><circle cx="260.8" cy="260.8" r="4" pathLength="1" class="d2"/>
+                      <circle cx="222.3" cy="283.1" r="4" pathLength="1" class="d2"/><circle cx="177.7" cy="283.1" r="4" pathLength="1" class="d2"/>
+                      <circle cx="139.2" cy="260.8" r="4" pathLength="1" class="d2"/><circle cx="116.9" cy="222.3" r="4" pathLength="1" class="d2"/>
+                      <circle cx="116.9" cy="177.7" r="4" pathLength="1" class="d2"/><circle cx="139.2" cy="139.2" r="4" pathLength="1" class="d2"/>
+                      <circle cx="177.7" cy="116.9" r="4" pathLength="1" class="d2"/><circle cx="222.3" cy="116.9" r="4" pathLength="1" class="d2"/>
+                      <circle cx="260.8" cy="139.2" r="4" pathLength="1" class="d2"/><circle cx="283.1" cy="177.7" r="4" pathLength="1" class="d2"/>
+                    </g>
+                    <circle cx="200" cy="200" r="62" pathLength="1"/>
+                  </g>
+                  <g class="part static">
+                    <circle cx="200" cy="200" r="48" pathLength="1" class="d2"/>
+                    <circle cx="200" cy="200" r="18" pathLength="1" class="d3"/>
+                  </g>
+                  <g class="part" data-part="E">
+                    <circle cx="200" cy="168" r="6" pathLength="1" class="d3"/><circle cx="230.4" cy="190.1" r="6" pathLength="1" class="d3"/>
+                    <circle cx="218.8" cy="225.9" r="6" pathLength="1" class="d3"/><circle cx="181.2" cy="225.9" r="6" pathLength="1" class="d3"/>
+                    <circle cx="169.6" cy="190.1" r="6" pathLength="1" class="d3"/>
+                  </g>
+                  <g class="part" data-part="A">
+                    <path class="fillable" d="M270 78.8 A140 140 0 0 1 340 200 L295 200 A95 95 0 0 0 247.5 117.7 Z" pathLength="1" stroke-width="2"/>
+                    <path d="M283 95 A124 124 0 0 1 323 170" pathLength="1" opacity=".5" class="d2"/>
+                  </g>
+                  <g class="part" data-part="B">
+                    <path class="hidden-line fade-in" d="M267.7 103.4 A118 118 0 0 1 317.5 189.7 L299.6 191.3 A100 100 0 0 0 257.4 118.1 Z"/>
+                  </g>
+                  <g class="part" data-part="C">
+                    <circle class="fillable d3" cx="327.3" cy="213.4" r="8" pathLength="1"/>
+                    <path d="M322.3 213.4 h10 M327.3 208.4 v10" pathLength="1" class="d3"/>
+                    <circle class="fillable" cx="252.1" cy="83" r="8" pathLength="1"/>
+                    <path d="M247.1 83 h10 M252.1 78 v10" pathLength="1"/>
+                  </g>
+                  <path d="M200 60 V82 M200 318 V340 M60 200 H82 M318 200 H340" opacity=".3" stroke-dasharray="6 3 1 3"/>
+                </g>
+
+                <g class="callout" data-part="A" style="animation-delay:1.3s">
+                  <path d="M308.3 137.5 L410 100" stroke="currentColor" fill="none"/><circle cx="308.3" cy="137.5" r="2" fill="currentColor"/>
+                  <circle cx="422" cy="100" r="11" stroke="currentColor"/><text class="letter" x="422" y="104" text-anchor="middle">A</text>
+                  <text x="440" y="104">Caliper</text>
+                </g>
+                <g class="callout" data-part="B" style="animation-delay:1.45s">
+                  <path d="M305.3 171.8 L410 160" stroke="currentColor" fill="none"/><circle cx="305.3" cy="171.8" r="2" fill="currentColor"/>
+                  <circle cx="422" cy="160" r="11" stroke="currentColor"/><text class="letter" x="422" y="164" text-anchor="middle">B</text>
+                  <text x="440" y="164">Brake pads</text>
+                </g>
+                <g class="callout" data-part="C" style="animation-delay:1.6s">
+                  <path d="M335 216 L410 220" stroke="currentColor" fill="none"/>
+                  <circle cx="422" cy="220" r="11" stroke="currentColor"/><text class="letter" x="422" y="224" text-anchor="middle">C</text>
+                  <text x="440" y="224">Slide bolt</text>
+                </g>
+                <g class="callout" data-part="D" style="animation-delay:1.75s">
+                  <path d="M106 234.2 L68 320" stroke="currentColor" fill="none"/><circle cx="106" cy="234.2" r="2" fill="currentColor"/>
+                  <circle cx="62" cy="331" r="11" stroke="currentColor"/><text class="letter" x="62" y="335" text-anchor="middle">D</text>
+                  <text x="80" y="335">Rotor</text>
+                </g>
+                <g class="callout" data-part="E" style="animation-delay:1.9s">
+                  <path d="M196 163 L98 60" stroke="currentColor" fill="none"/>
+                  <circle cx="90" cy="51" r="11" stroke="currentColor"/><text class="letter" x="90" y="55" text-anchor="middle">E</text>
+                  <text x="108" y="55">Lug nuts</text>
+                </g>
+              </svg>
+              </div>
+              <span class="xhair x" aria-hidden="true"></span><span class="xhair y" aria-hidden="true"></span>
+            </div>
+
+            <div class="procedure">
+              <div class="proc-meta mono"><span id="proc-count">8 steps</span><span id="proc-time">About 90 min</span></div>
+
+              <ol class="steps-list" data-mode="new">
+                <li data-part="E"><strong>Loosen the lug nuts first</strong><p>With the car still on the ground and the parking brake on, turn each lug nut about half a turn. The tire's weight keeps the wheel from spinning.</p></li>
+                <li><strong>Lift the car and support it</strong><p>Jack at the lift point shown in your manual, then set a jack stand under the frame and lower the car onto it.</p><span class="warn">Never work under a car held up only by a jack.</span></li>
+                <li data-part="D"><strong>Take the wheel off</strong><p>Behind it is a metal disc (the rotor) with a clamp around its edge (the caliper).</p></li>
+                <li data-part="C"><strong>Remove the lower slide bolt</strong><p>It's on the back of the caliper. Your manual lists the socket size.</p></li>
+                <li data-part="A"><strong>Swing the caliper up</strong><p>It pivots on the top bolt like a car hood. Don't let it hang by the rubber brake hose.</p></li>
+                <li data-part="B"><strong>Swap the pads</strong><p>Slide the old pads out, move any metal clips to the new ones, and slide them in.</p></li>
+                <li data-part="A"><strong>Push the piston back</strong><p>New pads are thicker, so press the caliper piston in slowly with a C-clamp. Watch that the brake fluid doesn't overflow.</p></li>
+                <li data-part="C"><strong>Put it back together and test</strong><p>Tighten the slide bolt to the torque in your manual, refit the wheel, and pump the brake pedal until it's firm.</p><span class="warn">The first few stops can feel soft. Test at low speed.</span></li>
+              </ol>
+
+              <ol class="steps-list pro" data-mode="pro" hidden>
+                <li data-part="E"><strong>Break lugs, lift, support, pull wheel</strong><p>Jack stands at the manual's lift points</p></li>
+                <li data-part="C"><strong>Remove lower slide bolt, pivot caliper up</strong><p>Support caliper off the hose</p></li>
+                <li data-part="B"><strong>Swap pads and hardware</strong><p>Inspect rotor for scoring and minimum thickness</p></li>
+                <li data-part="A"><strong>Compress piston</strong><p>Watch the reservoir level</p></li>
+                <li data-part="C"><strong>Reassemble, torque to spec, pump pedal</strong><p>Slide bolt and lug torque per your manual</p></li>
+              </ol>
+
+              <p class="footnote">An example of the output. Real steps will come from your car's own service manual.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="how">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="mono">&sect; 02 &middot; Process</span>
+          <h2>Three questions, then the fix.</h2>
+        </div>
+        <ol class="flow">
+          <li class="reveal">
+            <span class="mono">Step 01</span>
+            <h3>Tell it about your car</h3>
+            <p>Give it the make, model, and year, then say what's going wrong.</p>
+            <div class="mock"><span class="label mono">Your car and the problem</span><span class="typed" id="typed">2014 Civic, grinding noise when I brake</span></div>
+          </li>
+          <li class="reveal">
+            <span class="mono">Step 02</span>
+            <h3>Say how much you know</h3>
+            <p>Be honest about your experience. It decides how much detail you get.</p>
+            <div class="mock" aria-hidden="true"><span class="label mono">Experience</span><div class="scale"><i class="f"></i><i class="f"></i><i></i><i></i><i></i></div><div class="scale-labels"><span>Never touched a wrench</span><span>Mechanic</span></div></div>
+          </li>
+          <li class="reveal">
+            <span class="mono">Step 03</span>
+            <h3>Get your repair steps</h3>
+            <p>It looks up your car's service manual and lays out the fix for your situation.</p>
+            <div class="mock"><span class="label mono">Source</span><span class="cite"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 4h11a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z"/><path d="M4 17a3 3 0 0 1 3-3h11"/></svg>Factory service manual, brakes section</span></div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="block" id="features" style="padding-top:0">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="mono">&sect; 03 &middot; Spec sheet</span>
+          <h2>What we're building.</h2>
+          <p class="sub">Here's what wrench.repair is being designed to do.</p>
+        </div>
+        <table class="spec reveal">
+          <thead><tr><th class="mono">No.</th><th class="mono">Item</th><th class="mono">Description</th><th class="mono" style="text-align:right">Status</th></tr></thead>
+          <tbody>
+            <tr><td>F-01</td><td class="item">Steps from the manual</td><td class="desc">Instructions come from official service manuals, not guesses or forum threads.</td><td class="stat mono">Planned</td></tr>
+            <tr><td>F-02</td><td class="item">Matched to your experience</td><td class="desc">Beginners get more guidance. Experienced folks get a faster walkthrough.</td><td class="stat mono">Planned</td></tr>
+            <tr><td>F-03</td><td class="item">Plain-language explanations</td><td class="desc">You'll hear what's wrong and how to fix it without the jargon.</td><td class="stat mono">Planned</td></tr>
+            <tr><td>F-04</td><td class="item">Built around your car</td><td class="desc">It takes your vehicle and any other details you give it into account.</td><td class="stat mono">Planned</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="block" style="padding-top:0">
+      <div class="wrap status">
+        <div class="reveal">
+          <h2>Not open yet.</h2>
+          <p class="sub">wrench.repair is still in development and isn't available to use. This page will be updated when that changes.</p>
+          <span class="stamp" id="stamp" aria-hidden="true">In development</span>
+        </div>
+        <div class="warning reveal">
+          <span class="mono"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/></svg>Warning</span>
+          <p>wrench.repair is a helper, not a substitute for a professional mechanic. Working on a vehicle can be dangerous. If a repair is beyond your skill level or involves safety-critical systems, take your vehicle to a qualified professional.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <img src="assets/logo-transparent-gradient.png" alt="wrench.repair" width="188" height="30">
+      <small>&copy; <span id="year"></span> wrench.repair. All rights reserved.</small>
+    </div>
+  </footer>
+
   <script>
-  const form = document.getElementById("chat-form");
-  const input = document.getElementById("prompt");
-  const replyBox = document.getElementById("reply");
+    document.getElementById("year").textContent = new Date().getFullYear();
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
+    const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    const prompt = input.value.trim();
+    // Header border once the page scrolls
+    const topbar = document.querySelector(".topbar");
+    const onScroll = () => topbar.classList.toggle("scrolled", scrollY > 8);
+    addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
 
-    if (!prompt) {
-      replyBox.textContent = "Please type a message.";
-      return;
-    }
-
-    replyBox.textContent = "Sending...";
-
-    try {
-      // Send the typed message to your Worker.
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ prompt })
-      });
-
-      // Read the Worker's response.
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Request failed.");
+    // Scroll reveals
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        e.target.classList.add("in");
+        io.unobserve(e.target);
       }
+    }, { threshold: 0.15 });
+    document.querySelectorAll(".reveal, .flow, #stamp").forEach((el) => io.observe(el));
 
-      // Put its reply on the page.
-      replyBox.textContent = data.reply;
-
-    } catch (error) {
-      replyBox.textContent = "Error: " + error.message;
+    // Typed text in the step 01 mock
+    const typed = document.getElementById("typed");
+    const fullText = typed.textContent;
+    if (!reduceMotion) {
+      typed.textContent = "";
+      const typeIo = new IntersectionObserver(([e]) => {
+        if (!e.isIntersecting) return;
+        typeIo.disconnect();
+        let i = 0;
+        const tick = () => {
+          typed.textContent = fullText.slice(0, ++i);
+          if (i < fullText.length) setTimeout(tick, 35 + Math.random() * 60);
+        };
+        setTimeout(tick, 600);
+      }, { threshold: 0.6 });
+      typeIo.observe(typed);
     }
-  });
-</script>
+
+    // Figure: highlight parts, crosshair readout
+    const figure = document.getElementById("figure");
+    const art = figure.querySelector(".fig-art");
+    const readout = figure.querySelector(".readout");
+    const [xLine, yLine] = figure.querySelectorAll(".xhair");
+
+    function highlight(part) {
+      art.classList.toggle("has-on", !!part);
+      art.querySelectorAll("[data-part]").forEach((el) => el.classList.toggle("on", el.dataset.part === part));
+    }
+
+    figure.addEventListener("pointermove", (e) => {
+      const box = figure.getBoundingClientRect();
+      xLine.style.top = (e.clientY - box.top) + "px";
+      yLine.style.left = (e.clientX - box.left) + "px";
+      const svgBox = art.getBoundingClientRect();
+      const x = Math.round((e.clientX - svgBox.left) / svgBox.width * 520);
+      const y = Math.round((e.clientY - svgBox.top) / svgBox.height * 400);
+      const pad = (n) => String(Math.max(0, n)).padStart(3, "0");
+      readout.textContent = `X ${pad(x)}  Y ${pad(y)}`;
+    });
+
+    // Steps: hover highlights the part; otherwise auto-walk through the steps
+    const lists = document.querySelectorAll(".steps-list");
+    let activeList = lists[0];
+    let autoIndex = -1;
+    let hovering = false;
+
+    function setStep(li) {
+      activeList.querySelectorAll("li").forEach((el) => el.classList.toggle("on", el === li));
+      highlight(li ? li.dataset.part : null);
+    }
+
+    lists.forEach((list) => {
+      list.addEventListener("pointerover", (e) => {
+        const li = e.target.closest("li");
+        if (!li) return;
+        hovering = true;
+        setStep(li);
+      });
+      list.addEventListener("pointerleave", () => {
+        hovering = false;
+        setStep(null);
+      });
+    });
+
+    // Clicking a part in the drawing jumps to its first step
+    art.querySelectorAll("[data-part]").forEach((el) => {
+      el.style.cursor = "pointer";
+      el.addEventListener("click", () => {
+        const li = activeList.querySelector(`li[data-part="${el.dataset.part}"]`);
+        if (!li) return;
+        autoIndex = [...activeList.children].indexOf(li);
+        setStep(li);
+      });
+    });
+
+    if (!reduceMotion) {
+      let sheetVisible = false;
+      new IntersectionObserver(([e]) => { sheetVisible = e.isIntersecting; }, { threshold: 0.4 })
+        .observe(document.getElementById("example"));
+      setTimeout(() => {
+        setInterval(() => {
+          if (hovering || !sheetVisible || document.hidden) return;
+          const items = activeList.querySelectorAll("li");
+          autoIndex = (autoIndex + 1) % items.length;
+          setStep(items[autoIndex]);
+        }, 2600);
+      }, 2200);
+    }
+
+    // Experience toggle
+    const toggle = document.querySelector(".toggle");
+    const meta = { new: ["8 steps", "About 90 min"], pro: ["5 steps", "About 40 min"] };
+    toggle.addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn || btn.getAttribute("aria-pressed") === "true") return;
+      const mode = btn.dataset.mode;
+      toggle.dataset.mode = mode;
+      toggle.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b === btn));
+      setStep(null);
+      lists.forEach((list) => {
+        const show = list.dataset.mode === mode;
+        list.hidden = !show;
+        list.classList.toggle("entering", show);
+        if (show) activeList = list;
+      });
+      autoIndex = -1;
+      [document.getElementById("proc-count").textContent, document.getElementById("proc-time").textContent] = meta[mode];
+    });
+  </script>
 </body>
 </html>
