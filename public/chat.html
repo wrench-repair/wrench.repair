@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chat · wrench.repair</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 700px; margin: 0 auto; padding: 16px; }
+      #messages p { white-space: pre-wrap; }
+      textarea { width: 100%; box-sizing: border-box; font: inherit; }
+    </style>
+  </head>
+  <body>
+    <p>
+      <a href="/">wrench.repair</a> &middot;
+      Signed in as <span id="name"></span> &middot;
+      <a href="#" id="logout">Log out</a>
+    </p>
+
+    <div id="messages"></div>
+
+    <form id="form">
+      <textarea id="input" rows="3" placeholder="What's wrong with your car?" required></textarea>
+      <button type="submit" id="send">Send</button>
+    </form>
+
+    <script>
+      // Every message so far. The whole list is sent each time so the bot remembers the conversation.
+      const messages = [];
+
+      const list = document.getElementById("messages");
+      const form = document.getElementById("form");
+      const input = document.getElementById("input");
+      const send = document.getElementById("send");
+
+      function addMessage(who, text) {
+        const p = document.createElement("p");
+        const label = document.createElement("strong");
+        label.textContent = who + ": ";
+        p.append(label, text);
+        list.append(p);
+        p.scrollIntoView();
+        return p;
+      }
+
+      // Send people to the login page if they aren't signed in.
+      fetch("/api/me").then(async (res) => {
+        if (!res.ok) {
+          location.href = "/login";
+          return;
+        }
+        document.getElementById("name").textContent = (await res.json()).user.name;
+      });
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+
+        messages.push({ role: "user", text });
+        addMessage("You", text);
+        input.value = "";
+        send.disabled = true;
+        const waiting = addMessage("wrench.repair", "thinking...");
+
+        try {
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages }),
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            waiting.remove();
+            messages.pop(); // so they can try sending it again
+            addMessage("Error", data.error);
+            return;
+          }
+
+          waiting.remove();
+          messages.push({ role: "model", text: data.reply });
+          addMessage("wrench.repair", data.reply);
+        } catch {
+          waiting.remove();
+          messages.pop();
+          addMessage("Error", "Couldn't reach the server.");
+        } finally {
+          send.disabled = false;
+          input.focus();
+        }
+      });
+
+      // Enter sends, Shift+Enter makes a new line
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          form.requestSubmit();
+        }
+      });
+
+      document.getElementById("logout").addEventListener("click", async (e) => {
+        e.preventDefault();
+        await fetch("/api/logout", { method: "POST" });
+        location.href = "/login";
+      });
+    </script>
+  </body>
+</html>
