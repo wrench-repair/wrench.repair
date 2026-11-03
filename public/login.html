@@ -1,50 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <h1>log in here</h1>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Log in · wrench.repair</title>
     <script src="https://accounts.google.com/gsi/client" async></script>
 
     <script>
-      function decodeJWT(token) {
+      // Google calls this after someone picks their account.
+      // We send the token to our Worker, which checks it and sets a session cookie.
+      async function handleCredentialResponse(response) {
+        const res = await fetch("/api/auth/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: response.credential }),
+        });
+        const data = await res.json();
 
-        let base64Url = token.split(".")[1];
-        let base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-        let jsonPayload = decodeURIComponent(
-          atob(base64)
-            .split("")
-            .map(function (c) {
-              return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-            })
-            .join("")
-        );
-        return JSON.parse(jsonPayload);
+        if (!res.ok) {
+          document.getElementById("status").textContent = data.error;
+          return;
+        }
+
+        showUser(data.user);
       }
 
-      function handleCredentialResponse(response) {
+      function showUser(user) {
+        document.getElementById("signed-out").hidden = !!user;
+        document.getElementById("signed-in").hidden = !user;
+        document.getElementById("status").textContent = "";
 
-        console.log("Encoded JWT ID token: " + response.credential);
-
-        const responsePayload = decodeJWT(response.credential);
-
-        console.log("Decoded JWT ID token fields:");
-        console.log("  Full Name: " + responsePayload.name);
-        console.log("  Given Name: " + responsePayload.given_name);
-        console.log("  Family Name: " + responsePayload.family_name);
-        console.log("  Unique ID: " + responsePayload.sub);
-        console.log("  Profile image URL: " + responsePayload.picture);
-        console.log("  Email: " + responsePayload.email);
+        if (user) {
+          document.getElementById("name").textContent = user.name;
+          document.getElementById("email").textContent = user.email;
+        }
       }
+
+      async function logOut() {
+        await fetch("/api/logout", { method: "POST" });
+        google.accounts.id.disableAutoSelect();
+        showUser(null);
+      }
+
+      // On page load, check whether there's already a session.
+      window.addEventListener("DOMContentLoaded", async () => {
+        const res = await fetch("/api/me");
+        showUser(res.ok ? (await res.json()).user : null);
+      });
     </script>
   </head>
   <body>
-    <!-- g_id_onload contains Google Identity Services settings -->
-    <div
-      id="g_id_onload"
-      data-auto_prompt="false"
-      data-callback="handleCredentialResponse"
-      data-client_id="168483091113-vjomm9vjkrm3nlb9uj3dpf9hfufss2sc.apps.googleusercontent.com"
-    ></div>
-    <!-- g_id_signin places the button on a page and supports customization -->
-    <div class="g_id_signin"></div>
+    <h1>log in here</h1>
+
+    <div id="signed-out">
+      <!-- g_id_onload contains Google Identity Services settings -->
+      <div
+        id="g_id_onload"
+        data-auto_prompt="false"
+        data-callback="handleCredentialResponse"
+        data-client_id="168483091113-vjomm9vjkrm3nlb9uj3dpf9hfufss2sc.apps.googleusercontent.com"
+      ></div>
+      <!-- g_id_signin places the button on a page and supports customization -->
+      <div class="g_id_signin"></div>
+    </div>
+
+    <div id="signed-in" hidden>
+      <p>Signed in as <strong id="name"></strong> (<span id="email"></span>)</p>
+      <p><a href="/chat">Go to chat</a></p>
+      <button type="button" onclick="logOut()">Log out</button>
+    </div>
+
+    <p id="status"></p>
   </body>
 </html>

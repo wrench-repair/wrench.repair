@@ -3,6 +3,10 @@
   "name": "wrench-repair",
   "main": "src/worker.js",
   "compatibility_date": "2026-09-21",
+  "vars": {
+    // Public, safe to commit. SESSION_SECRET is a secret: set it with `npx wrangler secret put SESSION_SECRET`
+    "GOOGLE_CLIENT_ID": "168483091113-vjomm9vjkrm3nlb9uj3dpf9hfufss2sc.apps.googleusercontent.com"
+  },
   "assets": {
     "directory": "./public",
     "binding": "ASSETS"

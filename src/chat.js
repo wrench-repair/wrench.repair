@@ -1,4 +1,4 @@
-const MODEL = "gemma-4-31b";
+const MODEL = "gemini-3.5-flash-lite";
  
 const SYSTEM_PROMPT = `You are RepAIr, a car repair assistant for beginners who own economy cars.
 Ask one short question at a time to find the cause, starting with the most common causes.
@@ -7,7 +7,15 @@ Warn about safety when it matters (jack stands, hot engine, battery, fuel).
 If you are unsure or the job is unsafe for a beginner, tell them to see a mechanic.
 Write plain text only. Do not use markdown symbols like ** or #. Use short numbered lines for steps.`;
  
-export async function askGemini(prompt, env) {
+// messages is the whole conversation so far: [{ role: "user" | "model", text: "..." }, ...]
+export async function askGemini(messages, env) {
+  // Gemini wants each message as a "step"
+  const input = messages.map(message => ({
+    type: message.role === "model" ? "model_output" : "user_input",
+    content: [{ type: "text", text: message.text }],
+  }));
+
+
   const response = await fetch
   (
     "https://generativelanguage.googleapis.com/v1beta/interactions", 
@@ -22,7 +30,7 @@ export async function askGemini(prompt, env) {
 
       body: JSON.stringify({
         model: MODEL,
-        input: prompt,
+        input,
         system_instruction: SYSTEM_PROMPT,
       }),
     }

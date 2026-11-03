@@ -20,5 +20,8 @@
   "homepage": "https://github.com/wrench-repair/wrench.repair#readme",
   "devDependencies": {
     "wrangler": "^4.146.0"
+  },
+  "dependencies": {
+    "jose": "^6.2.15"
   }
 }
