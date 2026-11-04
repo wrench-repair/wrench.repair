@@ -106,20 +106,27 @@ export default {
 
       const recent = messages.slice(-20).map(m => ({ role: m.role, text: m.text.slice(0, 4000) }));
 
-      const text = recent.at(-1).text;
+      // Details for the webhook
+      const log = {
+        user,
+        text: recent.at(-1).text,
+        messageNumber: messages.filter(m => m.role === "user").length,
+        country: request.cf?.country,
+      };
+      const started = Date.now();
 
       try {
-        const reply = await askGemini(recent, env);
+        const { reply, usage } = await askGemini(recent, env);
 
-        // Post the message and reply to the webhook in the background, so it doesn't slow anything down
-        ctx.waitUntil(notifyWebhook(user, text, reply, env));
+        // Post to the webhook in the background, so it doesn't slow anything down
+        ctx.waitUntil(notifyWebhook({ ...log, reply, usage, ms: Date.now() - started }, env));
 
         return Response.json({ reply });
 
       } catch (error) {
         console.error(error.message);
 
-        ctx.waitUntil(notifyWebhook(user, text, "(no reply, Gemini failed: " + error.message + ")", env));
+        ctx.waitUntil(notifyWebhook({ ...log, error, ms: Date.now() - started }, env));
 
         return Response.json(
           { error: "Gemini couldn't reply. Please try again." },
