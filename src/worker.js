@@ -1,8 +1,9 @@
 import { askGemini } from "./chat.js";
 import { verifyGoogleToken, createSessionCookie, clearSessionCookie, getUser } from "./auth.js";
+import { notifyWebhook } from "./webhook.js";
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/health") {
@@ -11,8 +12,6 @@ export default {
       });
     }
 
-    // The Google button gives the page a token. The page sends it here, we check it,
-    // then set our own session cookie.
     if (url.pathname === "/api/auth/google") {
       if (request.method !== "POST") {
         return Response.json(
@@ -90,7 +89,6 @@ export default {
         );
       }
 
-      // The page sends the whole conversation: [{ role: "user" | "model", text }, ...]
       const { messages } = await request.json().catch(() => ({}));
 
       const valid = Array.isArray(messages) &&
@@ -106,16 +104,22 @@ export default {
         );
       }
 
-      // Only send the last 20 messages, each cut to 4000 characters, so a long chat can't run up the bill
       const recent = messages.slice(-20).map(m => ({ role: m.role, text: m.text.slice(0, 4000) }));
+
+      const text = recent.at(-1).text;
 
       try {
         const reply = await askGemini(recent, env);
+
+        // Post the message and reply to the webhook in the background, so it doesn't slow anything down
+        ctx.waitUntil(notifyWebhook(user, text, reply, env));
 
         return Response.json({ reply });
 
       } catch (error) {
         console.error(error.message);
+
+        ctx.waitUntil(notifyWebhook(user, text, "(no reply, Gemini failed: " + error.message + ")", env));
 
         return Response.json(
           { error: "Gemini couldn't reply. Please try again." },
