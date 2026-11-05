@@ -1,6 +1,18 @@
-import { askGemini } from "./chat.js";
+import { askGemini, isRefusal } from "./chat.js";
 import { verifyGoogleToken, createSessionCookie, clearSessionCookie, getUser } from "./auth.js";
-import { notifyWebhook } from "./webhook.js";
+import { notifyWebhook, describeError } from "./webhook.js";
+import { recordVisit, saveMessage, rateMessage } from "./db.js";
+import { handleAdmin, isAdmin } from "./admin.js";
+
+// Database errors shouldn't break sign-in or chat
+async function safely(promise, fallback = null) {
+  try {
+    return await promise;
+  } catch (error) {
+    console.error("Database error: " + error.message);
+    return fallback;
+  }
+}
 
 export default {
   async fetch(request, env, ctx) {
@@ -33,6 +45,8 @@ export default {
         const user = await verifyGoogleToken(credential, env);
         const cookie = await createSessionCookie(user, env);
 
+        await safely(recordVisit(user, request, env));
+
         return Response.json({ user }, { headers: { "Set-Cookie": cookie } });
 
       } catch (error) {
@@ -55,7 +69,42 @@ export default {
         );
       }
 
-      return Response.json({ user });
+      return Response.json({ user, admin: isAdmin(user, env) });
+    }
+
+    if (url.pathname.startsWith("/api/admin/")) {
+      return handleAdmin(request, url, env);
+    }
+
+    // Thumbs up / down
+    if (url.pathname === "/api/chat/feedback") {
+      if (request.method !== "POST") {
+        return Response.json(
+          { error: "Please send a POST request." },
+          { status: 405 }
+        );
+      }
+
+      const user = await getUser(request, env);
+
+      if (!user) {
+        return Response.json(
+          { error: "Please sign in first." },
+          { status: 401 }
+        );
+      }
+
+      const { messageId, rating } = await request.json().catch(() => ({}));
+
+      if (!Number.isInteger(messageId) || ![1, -1, null].includes(rating)) {
+        return Response.json(
+          { error: "Send { messageId, rating: 1 | -1 | null }." },
+          { status: 400 }
+        );
+      }
+
+      await rateMessage(user.id, messageId, rating, env);
+      return Response.json({ rating });
     }
 
     if (url.pathname === "/api/logout") {
@@ -89,7 +138,21 @@ export default {
         );
       }
 
-      const { messages } = await request.json().catch(() => ({}));
+      const { blocked } = await safely(recordVisit(user, request, env), { blocked: false });
+
+      if (blocked) {
+        return Response.json(
+          { error: "Your account can't use the chat right now." },
+          { status: 403 }
+        );
+      }
+
+      const body = await request.json().catch(() => ({}));
+      const { messages } = body;
+
+      const conversationId = typeof body.conversationId === "string" && body.conversationId.length <= 64
+        ? body.conversationId
+        : crypto.randomUUID();
 
       const valid = Array.isArray(messages) &&
         messages.length > 0 &&
@@ -106,7 +169,6 @@ export default {
 
       const recent = messages.slice(-20).map(m => ({ role: m.role, text: m.text.slice(0, 4000) }));
 
-      // Details for the webhook
       const log = {
         user,
         text: recent.at(-1).text,
@@ -114,19 +176,30 @@ export default {
         country: request.cf?.country,
       };
       const started = Date.now();
+      const saved = { userId: user.id, conversationId, text: log.text };
 
       try {
         const { reply, usage } = await askGemini(recent, env);
+        const ms = Date.now() - started;
 
-        // Post to the webhook in the background, so it doesn't slow anything down
-        ctx.waitUntil(notifyWebhook({ ...log, reply, usage, ms: Date.now() - started }, env));
+        // Runs in the background
+        ctx.waitUntil(notifyWebhook({ ...log, reply, usage, ms }, env));
 
-        return Response.json({ reply });
+        // Awaited so the chat page gets the ID for ratings
+        const messageId = await safely(
+          saveMessage({ ...saved, reply, usage, ms, refused: isRefusal(reply) }, request, env)
+        );
+
+        return Response.json({ reply, messageId, conversationId });
 
       } catch (error) {
         console.error(error.message);
+        const ms = Date.now() - started;
 
-        ctx.waitUntil(notifyWebhook({ ...log, error, ms: Date.now() - started }, env));
+        ctx.waitUntil(notifyWebhook({ ...log, error, ms }, env));
+        ctx.waitUntil(safely(
+          saveMessage({ ...saved, ms, error: describeError(error) + ": " + error.message }, request, env)
+        ));
 
         return Response.json(
           { error: "Gemini couldn't reply. Please try again." },

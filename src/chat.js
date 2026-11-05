@@ -1,4 +1,7 @@
 const MODEL = "gemini-3.5-flash-lite";
+
+// Matches the refusal lines in the prompt
+export const isRefusal = (reply) => /I can only help with car|I can't help with that/i.test(reply);
  
 const SYSTEM_PROMPT = `You are wrench.repair, a car repair assistant for beginners who own economy cars.
 
@@ -17,7 +20,7 @@ If you are unsure or the job is unsafe for a beginner, tell them to see a mechan
 Keep replies short.
 Write plain text only. Do not use markdown symbols like ** or #. Use short numbered lines for steps.`;
  
-// messages is the whole conversation so far: [{ role: "user" | "model", text: "..." }, ...]
+// messages: [{ role: "user" | "model", text }]
 export async function askGemini(messages, env) {
   // Gemini wants each message as a "step"
   const input = messages.map(message => ({
@@ -57,7 +60,6 @@ export async function askGemini(messages, env) {
     throw error;
   }
 
-  // Collect the text from Gemini's response.
   const reply = (data.steps ?? [])
     .filter(step => step.type === "model_output")
     .flatMap(step => step.content ?? [])

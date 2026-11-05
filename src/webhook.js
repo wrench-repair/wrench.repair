@@ -1,12 +1,13 @@
 // set WEBHOOK_URL
-// Posts each chat message to a Discord webhook as an embed:
-// green = fine, yellow = worth a look, red = Gemini failed
+// green = fine, yellow = look at it, red = error
 
 const GREEN = 0x2ecc71;
 const YELLOW = 0xf1c40f;
 const RED = 0xe74c3c;
 
-const SLOW_MS = 15000;
+import { isRefusal } from "./chat.js";
+
+export const SLOW_MS = 15000;
 
 const cut = (s, n) => (s.length > n ? s.slice(0, n) + "…" : s);
 
@@ -19,7 +20,7 @@ function countryWithFlag(code) {
   return flag + " " + code;
 }
 
-function describeError(error) {
+export function describeError(error) {
   if (error.reason === "API_KEY_INVALID") {
     return "API key problem (" + error.status + ")";
   }
@@ -34,7 +35,6 @@ function describeError(error) {
   }
 }
 
-// log: { user, text, messageNumber, country, ms, reply, usage } or { ..., error }
 export async function notifyWebhook(log, env) {
   if (!env.WEBHOOK_URL) {
     return;
@@ -50,7 +50,7 @@ export async function notifyWebhook(log, env) {
     color = RED;
     fields.push({ name: "❌ " + describeError(error), value: cut(error.message, 1000) });
   } else {
-    const refused = /I can only help with car|I can't help with that/i.test(reply);
+    const refused = isRefusal(reply);
     if (refused) notes.push("Refused (off-topic or not allowed)");
     if (!reply.trim()) notes.push("Empty reply");
     if (ms > SLOW_MS) notes.push("Slow reply");

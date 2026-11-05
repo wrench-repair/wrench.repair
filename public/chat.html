@@ -8,12 +8,16 @@
       body { font-family: system-ui, sans-serif; max-width: 700px; margin: 0 auto; padding: 16px; }
       #messages p { white-space: pre-wrap; }
       textarea { width: 100%; box-sizing: border-box; font: inherit; }
+      .rate { margin-bottom: 12px; font-size: 0.85em; color: #666; }
+      .rate button { font-size: 1em; }
+      .rate button.on { background: #cfe3ff; border-color: #1a5fb4; }
     </style>
   </head>
   <body>
     <p>
       <a href="/">wrench.repair</a> &middot;
       Signed in as <span id="name"></span> &middot;
+      <span id="admin-link" hidden><a href="/admin">Admin</a> &middot;</span>
       <a href="#" id="logout">Log out</a>
     </p>
 
@@ -25,8 +29,9 @@
     </form>
 
     <script>
-      // Every message so far. The whole list is sent each time so the bot remembers the conversation.
+      // Whole history is sent each time
       const messages = [];
+      const conversationId = crypto.randomUUID();
 
       const list = document.getElementById("messages");
       const form = document.getElementById("form");
@@ -43,13 +48,39 @@
         return p;
       }
 
-      // Send people to the login page if they aren't signed in.
+      function addRating(messageId) {
+        const div = document.createElement("div");
+        div.className = "rate";
+        div.append("Helpful? ");
+        const buttons = [[1, "👍"], [-1, "👎"]].map(([value, label]) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = label;
+          b.addEventListener("click", async () => {
+            const rating = b.classList.contains("on") ? null : value; // click again to undo
+            const res = await fetch("/api/chat/feedback", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ messageId, rating }),
+            });
+            if (res.ok) {
+              buttons.forEach(other => other.classList.toggle("on", other === b && rating !== null));
+            }
+          });
+          return b;
+        });
+        div.append(...buttons);
+        list.append(div);
+      }
+
       fetch("/api/me").then(async (res) => {
         if (!res.ok) {
           location.href = "/login";
           return;
         }
-        document.getElementById("name").textContent = (await res.json()).user.name;
+        const me = await res.json();
+        document.getElementById("name").textContent = me.user.name;
+        document.getElementById("admin-link").hidden = !me.admin;
       });
 
       form.addEventListener("submit", async (e) => {
@@ -67,7 +98,7 @@
           const res = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages }),
+            body: JSON.stringify({ messages, conversationId }),
           });
           const data = await res.json();
 
@@ -81,6 +112,7 @@
           waiting.remove();
           messages.push({ role: "model", text: data.reply });
           addMessage("wrench.repair", data.reply);
+          if (data.messageId) addRating(data.messageId);
         } catch {
           waiting.remove();
           messages.pop();
