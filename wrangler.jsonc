@@ -7,6 +7,14 @@
     // Public, safe to commit. SESSION_SECRET is a secret: set it with `npx wrangler secret put SESSION_SECRET`
     "GOOGLE_CLIENT_ID": "168483091113-vjomm9vjkrm3nlb9uj3dpf9hfufss2sc.apps.googleusercontent.com"
   },
+  // Create tables: npx wrangler d1 migrations apply wrench-repair --remote
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wrench-repair",
+      "database_id": "bffc77be-f47d-4e10-895b-5631820969c5"
+    }
+  ],
   "assets": {
     "directory": "./public",
     "binding": "ASSETS"
