@@ -1,4 +1,4 @@
-// D1 database (env.DB). Does nothing if it isn't set up.
+// D1 database (env.DB)
 
 function visitInfo(request) {
   return {
