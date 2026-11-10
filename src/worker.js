@@ -138,7 +138,7 @@ export default {
         );
       }
 
-      const { blocked } = await safely(recordVisit(user, request, env), { blocked: false });
+      const { blocked, debug } = await safely(recordVisit(user, request, env), { blocked: false, debug: false });
 
       if (blocked) {
         return Response.json(
@@ -190,7 +190,12 @@ export default {
           saveMessage({ ...saved, reply, usage, ms, refused: isRefusal(reply) }, request, env)
         );
 
-        return Response.json({ reply, messageId, conversationId });
+        // Same numbers as the webhook
+        const tokens = debug
+          ? { total: usage.total_tokens, input: usage.total_input_tokens, output: usage.total_output_tokens }
+          : undefined;
+
+        return Response.json({ reply, messageId, conversationId, tokens });
 
       } catch (error) {
         console.error(error.message);

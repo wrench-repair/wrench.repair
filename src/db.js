@@ -7,10 +7,10 @@ function visitInfo(request) {
   };
 }
 
-// Returns { blocked }
+// Returns { blocked, debug }
 export async function recordVisit(user, request, env) {
   if (!env.DB) {
-    return { blocked: false };
+    return { blocked: false, debug: false };
   }
 
   const { ip, country } = visitInfo(request);
@@ -21,12 +21,12 @@ export async function recordVisit(user, request, env) {
      VALUES (?1, ?2, ?3, ?4, ?5, ?5, ?6, ?7)
      ON CONFLICT (id) DO UPDATE SET
        email = ?2, name = ?3, picture = ?4, last_seen_at = ?5, last_ip = ?6, last_country = ?7
-     RETURNING blocked`
+     RETURNING blocked, debug`
   )
     .bind(user.id, user.email, user.name ?? null, user.picture ?? null, now, ip, country)
     .first();
 
-  return { blocked: row?.blocked === 1 };
+  return { blocked: row?.blocked === 1, debug: row?.debug === 1 };
 }
 
 // Returns the message ID
@@ -98,6 +98,12 @@ export async function getUserDetail(userId, env) {
 export async function setBlocked(userId, blocked, env) {
   await env.DB.prepare("UPDATE users SET blocked = ? WHERE id = ?")
     .bind(blocked ? 1 : 0, userId)
+    .run();
+}
+
+export async function setDebug(userId, debug, env) {
+  await env.DB.prepare("UPDATE users SET debug = ? WHERE id = ?")
+    .bind(debug ? 1 : 0, userId)
     .run();
 }
 

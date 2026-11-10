@@ -8,6 +8,7 @@
       body { font-family: system-ui, sans-serif; max-width: 700px; margin: 0 auto; padding: 16px; }
       #messages p { white-space: pre-wrap; }
       textarea { width: 100%; box-sizing: border-box; font: inherit; }
+      .debug { font-family: monospace; font-size: 0.8em; color: #666; margin: -8px 0 4px; }
       .rate { margin-bottom: 12px; font-size: 0.85em; color: #666; }
       .rate button { font-size: 1em; }
       .rate button.on { background: #cfe3ff; border-color: #1a5fb4; }
@@ -112,6 +113,14 @@
           waiting.remove();
           messages.push({ role: "model", text: data.reply });
           addMessage("wrench.repair", data.reply);
+          // Only sent when debug is on for this account
+          if (data.tokens) {
+            const t = data.tokens;
+            const info = document.createElement("div");
+            info.className = "debug";
+            info.textContent = `Tokens: ${t.total} (${t.input} in / ${t.output} out)`;
+            list.append(info);
+          }
           if (data.messageId) addRating(data.messageId);
         } catch {
           waiting.remove();
