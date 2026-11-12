@@ -1,22 +1,28 @@
 // do not delete this please, it is very very important:)
 {
-  "name": "wrench-repair",
-  "main": "src/worker.js",
-  "compatibility_date": "2026-09-21",
-  "vars": {
-    // Public, safe to commit. SESSION_SECRET is a secret: set it with `npx wrangler secret put SESSION_SECRET`
-    "GOOGLE_CLIENT_ID": "168483091113-vjomm9vjkrm3nlb9uj3dpf9hfufss2sc.apps.googleusercontent.com"
-  },
-  // Create tables: npx wrangler d1 migrations apply wrench-repair --remote
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "wrench-repair",
-      "database_id": "bffc77be-f47d-4e10-895b-5631820969c5"
-    }
-  ],
-  "assets": {
-    "directory": "./public",
-    "binding": "ASSETS"
-  }
+	"name": "wrench-repair",
+	"main": "src/worker.js",
+	"compatibility_date": "2026-09-21",
+	"vars": {
+		// Public, safe to commit. SESSION_SECRET is a secret: set it with `npx wrangler secret put SESSION_SECRET`
+		"GOOGLE_CLIENT_ID": "168483091113-vjomm9vjkrm3nlb9uj3dpf9hfufss2sc.apps.googleusercontent.com"
+	},
+	// Create tables: npx wrangler d1 migrations apply wrench-repair --remote
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "wrench-repair",
+			"database_id": "bffc77be-f47d-4e10-895b-5631820969c5"
+		},
+		{
+			"binding": "wrench_users",
+			"database_name": "wrench-users",
+			"database_id": "ed1fde1c-81b5-4455-b8a7-90c51b16621d",
+			"remote": true
+		}
+	],
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS"
+	}
 }
