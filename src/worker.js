@@ -59,6 +59,8 @@ export default {
       }
     }
 
+    
+
     if (url.pathname === "/api/me") {
       const user = await getUser(request, env);
 
