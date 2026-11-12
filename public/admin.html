@@ -113,6 +113,7 @@
             el("a", { href: "#/user/" + encodeURIComponent(u.id) }, u.name || "(no name)"),
             el("div", { class: "muted" }, u.email),
             u.blocked ? el("span", { class: "tag red" }, "Blocked") : null,
+            u.debug ? el("span", { class: "tag" }, "Debug") : null,
           ),
           el("td", { class: "num" }, String(u.message_count)),
           el("td", { class: "num" }, String(u.conversation_count)),
@@ -187,7 +188,25 @@
           },
         }, u.blocked ? "Unblock" : "Block from chat");
 
-        const tokens = messages.reduce((sum, m) => sum + (m.total_tokens || 0), 0);
+        // Debug shows the user token counts under each reply
+        const debugButton = el("button", {
+          onclick: async () => {
+            debugButton.disabled = true;
+            try {
+              await api("/users/" + encodeURIComponent(id) + "/debug", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ debug: !u.debug }),
+              });
+              showUser(id);
+            } catch (e) {
+              alert(e.message);
+              debugButton.disabled = false;
+            }
+          },
+        }, u.debug ? "Turn debug off" : "Turn debug on");
+
+        const tokens =messages.reduce((sum, m) => sum + (m.total_tokens || 0), 0);
         const count = (test) => messages.filter(test).length;
 
         const convos = new Map();
@@ -207,6 +226,7 @@
             u.picture ? el("img", { class: "avatar", src: u.picture, alt: "", referrerPolicy: "no-referrer" }) : null,
             u.name || "(no name)", " ",
             u.blocked ? el("span", { class: "tag red" }, "Blocked") : null,
+            u.debug ? el("span", { class: "tag" }, "Debug") : null,
           ),
           el("div", { class: "muted" }, u.email + " · Google ID " + u.id),
           el("div", { class: "stats" },
@@ -223,7 +243,7 @@
             el("tr", {}, el("th", {}, "Last used AI"), el("td", {}, ago(u.last_chat_at))),
             el("tr", {}, el("th", {}, "Last IP"), el("td", {}, (u.last_ip || "unknown") + " " + flag(u.last_country))),
           )),
-          el("p", {}, blockButton),
+          el("p", {}, blockButton, " ", debugButton),
           ...(messages.length ? convoBlocks : [el("p", { class: "muted" }, "No messages yet.")]),
         );
       }

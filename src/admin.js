@@ -1,5 +1,5 @@
 import { getUser } from "./auth.js";
-import { listUsers, getUserDetail, setBlocked, listFlagged } from "./db.js";
+import { listUsers, getUserDetail, setBlocked, setDebug, listFlagged } from "./db.js";
 import { SLOW_MS } from "./webhook.js";
 
 // set ADMIN_EMAILS (comma-separated)
@@ -51,6 +51,17 @@ export async function handleAdmin(request, url, env) {
     }
     await setBlocked(decodeURIComponent(match[1]), blocked, env);
     return Response.json({ blocked });
+  }
+
+  // /users/<id>/debug
+  match = path.match(/^\/users\/([^/]+)\/debug$/);
+  if (match && request.method === "POST") {
+    const { debug } = await request.json().catch(() => ({}));
+    if (typeof debug !== "boolean") {
+      return Response.json({ error: "Send { debug: true | false }." }, { status: 400 });
+    }
+    await setDebug(decodeURIComponent(match[1]), debug, env);
+    return Response.json({ debug });
   }
 
   return Response.json({ error: "Not found." }, { status: 404 });
